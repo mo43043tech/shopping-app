@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>おこづかい買い物チャレンジ</title>
+
+<style>
+body{
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    margin:0;
+    padding:15px;
+    background:#f5f7fb;
+}
+
+.card{
+    background:white;
+    border-radius:16px;
+    padding:15px;
+    margin-bottom:15px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.label{
+    text-align:center;
+    color:#666;
+    margin-bottom:8px;
+}
+
+.big{
+    font-size:48px;
+    font-weight:bold;
+    text-align:center;
+}
+
+input{
+    width:100%;
+    box-sizing:border-box;
+    font-size:24px;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid #ccc;
+    margin-bottom:10px;
+}
+
+button{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    font-size:22px;
+}
+
+.addBtn{
+    background:#4CAF50;
+    color:white;
+}
+
+.deleteBtn{
+    background:#f44336;
+    color:white;
+    width:auto;
+    padding:8px 12px;
+    font-size:18px;
+}
+
+.bar{
+    height:36px;
+    background:#ddd;
+    border-radius:18px;
+    overflow:hidden;
+    margin-top:10px;
+}
+
+.fill{
+    height:100%;
+    width:0%;
+    background:#4CAF50;
+    transition:.3s;
+}
+
+.status{
+    margin-top:12px;
+    text-align:center;
+    font-size:22px;
+    font-weight:bold;
+}
+
+.item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid #eee;
+}
+
+.itemText{
+    font-size:20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <div class="label">予算（円）</div>
+    <input id="budget" type="number" value="200">
+</div>
+
+<div class="card">
+
+    <div class="label">あと使える</div>
+    <div id="remain" class="big">200円</div>
+
+    <div class="label" style="margin-top:15px;">
+        合計
+    </div>
+    <div id="total" style="font-size:32px;text-align:center;">
+        0円
+    </div>
+
+    <div class="bar">
+        <div id="fill" class="fill"></div>
+    </div>
+
+    <div id="status" class="status">
+        たっぷり買える！
+    </div>
+
+</div>
+
+<div class="card">
+
+    <input
+        id="itemName"
+        type="text"
+        placeholder="なにを買いますか？">
+
+    <input
+        id="price"
+        type="number"
+        placeholder="いくらですか？">
+
+    <button
+        class="addBtn"
+        onclick="addItem()">
+        カゴに入れる
+    </button>
+
+</div>
+
+<div class="card">
+
+    <h2>カゴの中</h2>
+
+    <div id="list"></div>
+
+</div>
+
+<script>
+
+let items =
+JSON.parse(
+localStorage.getItem("shopping_items")
+|| "[]"
+);
+
+function save(){
+
+    localStorage.setItem(
+        "shopping_items",
+        JSON.stringify(items)
+    );
+
+    localStorage.setItem(
+        "shopping_budget",
+        document.getElementById("budget").value
+    );
+}
+
+function update(){
+
+    const budget =
+    Number(
+        document.getElementById("budget").value
+    );
+
+    const total =
+    items.reduce(
+        (sum,item)=>sum+item.price,
+        0
+    );
+
+    const remain =
+    budget-total;
+
+    document.getElementById("remain")
+        .textContent =
+        remain + "円";
+
+    document.getElementById("total")
+        .textContent =
+        total + "円";
+
+    const percent =
+    budget > 0
+    ? (total/budget)*100
+    : 0;
+
+    const fill =
+    document.getElementById("fill");
+
+    fill.style.width =
+    Math.min(percent,100) + "%";
+
+    const status =
+    document.getElementById("status");
+
+    if(total > budget){
+
+        fill.style.background="#f44336";
+
+        status.textContent =
+        (total-budget) +
+        "円オーバー！";
+
+    }
+    else if(total === budget){
+
+        fill.style.background="#2196F3";
+
+        status.textContent =
+        "ぴったり賞！！";
+
+    }
+    else if(percent >= 75){
+
+        fill.style.background="#ff9800";
+
+        status.textContent =
+        "あと少しで予算だよ";
+
+    }
+    else if(percent >= 50){
+
+        fill.style.background="#ffc107";
+
+        status.textContent =
+        "半分以上使ったよ";
+
+    }
+    else{
+
+        fill.style.background="#4CAF50";
+
+        status.textContent =
+        "たっぷり買える！";
+
+    }
+
+    drawList();
+
+    save();
+}
+
+function drawList(){
+
+    const list =
+    document.getElementById("list");
+
+    list.innerHTML="";
+
+    items.forEach((item,index)=>{
+
+        const row =
+        document.createElement("div");
+
+        row.className="item";
+
+        row.innerHTML=
+        `
+        <div class="itemText">
+            ${item.name}
+            （${item.price}円）
+        </div>
+
+        <button
+            class="deleteBtn"
+            onclick="removeItem(${index})">
+            ×
+        </button>
+        `;
+
+        list.appendChild(row);
+    });
+}
+
+function addItem(){
+
+    const name =
+    document.getElementById("itemName")
+    .value.trim();
+
+    const price =
+    Number(
+        document.getElementById("price")
+        .value
+    );
+
+    if(price <= 0){
+        return;
+    }
+
+    items.push({
+        name:
+        name === ""
+        ? "商品"
+        : name,
+        price:price
+    });
+
+    document.getElementById("itemName")
+    .value="";
+
+    document.getElementById("price")
+    .value="";
+
+    update();
+}
+
+function removeItem(index){
+
+    items.splice(index,1);
+
+    update();
+}
+
+document
+.getElementById("budget")
+.addEventListener(
+    "input",
+    update
+);
+
+const savedBudget =
+localStorage.getItem(
+"shopping_budget"
+);
+
+if(savedBudget){
+
+    document.getElementById("budget")
+    .value =
+    savedBudget;
+}
+
+update();
+
+</script>
+
+</body>
+</html>
